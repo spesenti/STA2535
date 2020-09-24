@@ -1,3 +1,6 @@
+
+setwd("~/STA2535")
+
 # Import dataset: Death_Probability_Canada_2018
 mort_2018 <- read.csv("Mortality-Canada-2018.csv")
 # let's have a look at the dataset
