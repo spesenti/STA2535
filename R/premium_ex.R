@@ -7,6 +7,9 @@ setwd("~/STA2535")
 
 
 # life contingencies package in R
+# the following two commands might be necessary
+# install.packages("lifecontingencies")
+# library(lifecontingencies)
 require("lifecontingencies")
 
 # actuarial table life table 
