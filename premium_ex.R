@@ -1,4 +1,5 @@
 
+### Example with premium from lecture
 
 ### QUESTION a)
 
@@ -7,20 +8,28 @@ setwd("~/STA2535")
 
 # life contingencies package in R
 require("lifecontingencies")
-?soa08
-data(soa08Act)
-# we need an actuarial table life table 
 
+# actuarial table life table 
+?soa08Act
+data(soa08Act)
+soa08Act
 
 l_table <- soa08Act
-# example in the lecture
-A70_10 <- Axn(l_table, 70, 10)
+
+# n-year term life insurance
+?Axn
+A70_10 <- Axn(l_table, 70, 10) # default interest is 6%
+
+# n-year term annuity due 
+?axn
 dot_a70_10 <-  axn(l_table, 70, 10)
   
 premium <- (1000000 * A70_10 + 4500 + 500 * dot_a70_10) / 
             (0.9 * dot_a70_10 - 0.4)
 
 premium
+
+# How does the premium change for different interest rates? 
 # more realistic with lower interest rates 
 
 premium_interest <- function(i){
@@ -31,6 +40,7 @@ premium_interest <- function(i){
     (0.9 * .dot_a70_10 - 0.4)
 return(.premium)  
 }
+
 premium_interest(0.01)
 premium_interest(0.03)
 premium_interest(0.06)
@@ -49,7 +59,7 @@ plot(int_seq, pre, main = "premium for different interest rates", xlab = "Intere
 
 
 
-### QUESTION b)
+### QUESTION b) (interest is 6%)
 
 # we need n-term pure endowment
 
