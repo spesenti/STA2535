@@ -12,7 +12,7 @@ setwd("~/STA2535")
 # library(lifecontingencies)
 require("lifecontingencies")
 
-# actuarial table life table 
+# actuarial life table 
 ?soa08Act
 data(soa08Act)
 soa08Act
