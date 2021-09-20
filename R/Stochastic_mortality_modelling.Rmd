@@ -1,0 +1,249 @@
+---
+title: "Stochastic mortality modelling using StMoMo"
+subtitle: "University of Toronto, STA2535"
+author: "Prof. S. Pesenti"
+date: "20/09/2021"
+header-includes:
+- \usepackage{lastpage}
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \setlength{\headheight}{23pt}
+- \fancyhead[L]{ACT 350}
+- \fancyhead[R]{University of Toronto\\ Prof. S. Pesenti}
+- \fancyfoot[C]{}
+- \fancyfoot[R]{\thepage \, of \pageref{LastPage}}
+output:
+  html_document: default
+  md_document:
+    variant: markdown_github
+  pdf_document: default
+---
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+require(knitr)
+require(formatR)
+opts_chunk$set(tidy.opts=list(width.cutoff=70),tidy=TRUE)
+```
+
+
+# The Lee-Carter model
+
+We assume that the number of deaths of people aged $x$ at time $t$, that die within calendar year $t$, $D(t,x)$, are modelled by a Poisson random variable
+$$
+D(t, x) \sim Pois\left(E(t,x)\, \mu(t, x)\right)\,,
+$$
+where $E(t,x)$ is the average population during calendar year $t$ of people aged $x$, and $\mu(t,x)$ the force of mortality of people aged $x$ at time $t$.    
+
+Moreover, the force of mortality $\mu(t,x)$ is modelled through
+
+$$
+\log\left( \, \mu(t,x)\,\right)
+=
+\alpha_x + \beta_x \kappa_t + \epsilon_{x,t}
+$$
+with constraints 
+$$
+\sum_t \kappa_t = 0 
+\quad \text{and}\quad
+\sum_x \beta_x = 1\,.
+$$
+**Identifiability issue**    
+
+The above constraints are necessary since the following reparametrisation yields exactly the same model. For $c_1$ and $c_2 \neq 0$, we can rewrite the dynamics for $\mu(t,x)$ using 
+$$
+(\alpha_x,\; \beta_x,\; \kappa_t) 
+\rightarrow
+\left(\alpha_x + c_1 \beta_x,\; \frac{1}{c_2}\beta_x, \;c_2(\kappa_t - c_1) \right) \,.
+$$
+Indeed, using this reparametrisation, we obtain
+\begin{align}
+\log\left( \, \mu(t,x)\,\right)
+= \alpha_x + c_1 \beta_x +  \frac{1}{c_2}\beta_x\, c_2(\kappa_t - c_1)+ \epsilon_{x,t}
+= \alpha_x + \beta_x \kappa_t + \epsilon_{x,t}\,.
+\end{align}
+
+Thus, without the constraints it would be impossible to estimate the parameters.
+
+
+## Initialising the Lee-Carter model
+First we need to install the **StMoMo** package:
+```{r installation, message=FALSE, warning=FALSE}
+require(StMoMo)
+```
+
+Next, we need to implement the function that implements the constraint, that is the transformation that yields the same dynamics for $\mu(t,x)$.
+```{r constraint function}
+constLC <- function(ax, bx, kt, b0x, gc, wxt, ages){
+  # sum over the reparametrised kt
+  c1 <- mean(kt[1, ], na.rm = TRUE)
+  # sum over the reparametrised bx
+  c2 <- sum(bx[, 1], na.rm = TRUE)
+  # reparametrisation
+  list(ax = ax + c1 * bx, bx = bx / c2, kt = c2 * (kt - c1))
+}
+```
+
+How to find `c1` and `c2`? The constraints have to be fulfilled for the reparametrised parameters. Denote $\tilde{\alpha}_x:= \alpha_x + c_1 \beta_x$, $\tilde{\beta}_x := \frac{1}{c_2}\beta_x$, and $\tilde{\kappa}_t := c_2(\kappa_t - c_1)$. Then, the constrains become
+
+$$
+\sum_t \tilde{\kappa}_t 
+= c_2 \left(\sum_t  (\kappa_t - c_1)\right)\,
+= c_2 \left(\left(\sum_t  \kappa_t\right) - n c_1\right) \stackrel{!}{=} 0, 
+\quad \text{ if and only if } \quad  
+ c_1 = \frac1n\sum_t \kappa_t\,,
+$$
+where $n$ is the number of summands, that is the total number of years. The second constraint yields: 
+$$
+\sum_x \tilde{\beta}_x = \frac{1}{c_2} \sum_x \beta_x
+\stackrel{!}{=} 1, 
+\quad \text{ if and only if } \quad
+c_2 = \sum_x \beta_x\,.
+$$
+
+Then, we initialise the Lee-Carter model, that is the StMoMo object
+```{r}
+ LC <- StMoMo(link = "log", staticAgeFun = TRUE, periodAgeFun = "NP", constFun = constLC)
+LC$gnmFormula
+```
+
+
+## The data
+Next, we consider the data in the package, which is mortality data from England and Wales.
+```{r}
+EWMaleData
+
+```
+The data contains the death counts `EWMaleData$Dxt`, the exposure `EWMaleData$Ext`, the ages `EWMaleData$ages`, the years `EWMaleData$years`, whether the exposures are initial or central (central = initial - 0.5 # of deaths) `EWMaleData$type` the sex `EWMaleData$series`, which is `r EWMaleData$series`, and the country `EWMaleData$label` which is `r EWMaleData$label`.
+
+
+```{r, death-by-year, fig.dim = c(10, 8), fig.align = 'center'}
+# EWMaleData$Dxt is a matrix, where the rows are by age and columns by calendar year
+dim(EWMaleData$Dxt)
+
+# plot the number of deaths, exposures, and percentage of deaths over the years
+par(mfrow=c(3,3))
+# 10 year olds
+plot(EWMaleData$years, EWMaleData$Dxt[10, ], 
+     xlab =" years", ylab = "deaths", main = "10 year old")
+plot(EWMaleData$years, EWMaleData$Ext[10, ],
+     xlab =" years", ylab = "exposures", main = "10 year old")
+plot(EWMaleData$years, EWMaleData$Dxt[10, ] / EWMaleData$Ext[10, ], 
+     xlab =" years", ylab = "deaths / exposures", main = "10 year old")
+
+# 30 year olds
+plot(EWMaleData$years, EWMaleData$Dxt[30, ], 
+     xlab =" years", ylab = "deaths", main = "30 year old")
+plot(EWMaleData$years, EWMaleData$Ext[30, ],
+     xlab =" years", ylab = "exposures", main = "30 year old")
+plot(EWMaleData$years, EWMaleData$Dxt[30, ] / EWMaleData$Ext[30, ], 
+     xlab =" years", ylab = "deaths / exposures", main = "30 year old")
+
+# 90 year olds
+plot(EWMaleData$years, EWMaleData$Dxt[90, ],
+     xlab =" years", ylab = "deaths", main = "90 year old")
+plot(EWMaleData$years, EWMaleData$Ext[90, ],
+     xlab =" years", ylab = "exposures", main = "90 year old")
+plot(EWMaleData$years, EWMaleData$Dxt[90, ] / EWMaleData$Ext[90, ],
+     xlab =" years", ylab = "deaths / exposures", main = "90 year old")
+
+```
+
+## Fitting the Lee-Carter model
+
+Next we specify which ages and calendar years we want to fit the model to. Note that the exposures are already central, so no need to transform them.
+
+```{r, message=FALSE,warning=FALSE}
+# we only look at ages between 55 and 89
+ages_fit <- 55:89
+# matrix with 1 if year and age is included and 0 otherwise
+# `clip` indicates the number of cohorts in the boundary to assign a zero weight. 
+wxt <- genWeightMat(ages = ages_fit, years = EWMaleData$years, clip = 3)
+# fit the Lee-Carter model
+LC_fit <- fit(LC, data = EWMaleData, ages.fit = ages_fit, wxt = wxt)
+
+```
+## Analysing the model
+**Parameters of the Lee-Carter model**  
+Next we have a look at the fitted parameters. The package already has an implemented plotting functions which plots the parameters either against years and ages.
+
+```{r, fig.dim= c(10,4), fig.align = 'center'}
+# the `ncol` argument allows to put the plots next to each other.
+plot(LC_fit,  nCol = 3)
+```
+
+What information do these plots provide of the parameters?
+
+
+**Goodness-of-fit**    
+We can assess the goodness-of-fit of the model to the data by for example looking at the residuals.
+
+```{r, fig.dim= c(10,4), fig.align = 'center'}
+
+LC_res <- residuals(LC_fit)
+plot(LC_res, type = "scatter", reslim = c(-3.5, 3.5))
+```
+
+
+For model comparison, one could use for example the Bayesian Information Criterion (BIC).
+
+## Forefasting of mortality
+
+For forecasting, we need to know the parameter $\kappa_t$ for years that are outside our dataset. Thus, we need a time series model for modelling $\kappa_t$. One simple model is ARIMA(0,1,0), in this case a random walk with drift. For this assume that
+$$
+ \kappa_{t} = \delta + \kappa_{t-1} + \xi_t\, 
+ \quad \text{where} \quad 
+ \xi_t \sim N(0, \sigma^2)
+$$
+and $\delta$ is the drift parameter. Next, from our dataset we estimate $\delta$ and $\sigma^2$ and then use them calculate $\kappa_s$ for time points $s$ outside our dataset.
+
+Next, we use our model to forecast the number of deaths for the next 50 years.
+
+```{r, fig.align = 'center'}
+# the parameter `h` are the number of years to forecast.
+LC_forecast <- forecast(LC_fit, h = 50)
+# plotting the parameters
+plot(LC_forecast, only.kt = TRUE)
+
+```
+
+Next, we can simulate paths of the Lee-Carter model using `simulate` to then obtain simulated paths of the mortalities.
+```{r}
+LC_sim <- simulate(LC_fit, nsim = 500, h = 50)
+```
+
+
+Plotting simulations of the mortality rate for people aged 65 for the next 50 calendar years.
+
+```{r, mortality-rate, fig.align= 'center'}
+qtx <- EWMaleData$Dxt / EWMaleData$Ext
+plot(LC_fit$years, qtx["65", ], xlim = range(LC_fit$years, LC_sim$years),
+    ylim = range(qtx["65", ], LC_sim$rates["65", , 1:20]), type = "l",
+    xlab = "year", ylab = "rate", main = "Mortality rates at age 65")
+matlines(LC_sim$years, LC_sim$rates["65", , 1:20], type = "l", lty = 1)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
