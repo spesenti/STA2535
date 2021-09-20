@@ -103,7 +103,6 @@ $$
 Then, we initialise the Lee-Carter model, that is the StMoMo object
 ```{r}
  LC <- StMoMo(link = "log", staticAgeFun = TRUE, periodAgeFun = "NP", constFun = constLC)
-LC$gnmFormula
 ```
 
 

@@ -78,10 +78,7 @@ Then, we initialise the Lee-Carter model, that is the StMoMo object
 
 ``` r
 LC <- StMoMo(link = "log", staticAgeFun = TRUE, periodAgeFun = "NP", constFun = constLC)
-LC$gnmFormula
 ```
-
-    ## [1] "D ~ -1 + offset(log(E)) + offset(o) + factor(x) + Mult(factor(x), factor(t), inst = 1)"
 
 ## The data
 
@@ -165,7 +162,7 @@ LC_fit <- fit(LC, data = EWMaleData, ages.fit = ages_fit, wxt = wxt)
     ## StMoMo: Start fitting with gnm
     ## Initialising
     ## Running start-up iterations..
-    ## Running main iterations.......
+    ## Running main iterations.....
     ## Done
     ## StMoMo: Finish fitting with gnm
 
