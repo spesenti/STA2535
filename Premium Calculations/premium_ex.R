@@ -46,7 +46,7 @@ premium <- (1000000 * A70_10 + 4500 + 500 * dot_a70_10) /
 premium
 
 # How does the premium change for different interest rates? 
-# more realistic with lower interest rates 
+# It is more realistic with lower interest rates 
 
 premium_interest <- function(i){
   .A70_10 <- Axn(l_table, 70, 10, i = i)
